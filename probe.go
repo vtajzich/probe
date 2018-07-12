@@ -14,7 +14,7 @@ import (
 	"syscall"
 )
 
-func getActualStatus(source string) (result string, err error) {
+func loadDataFromSource(source string) (result string, err error) {
 
 	res, err := http.Get(source)
 
@@ -28,8 +28,6 @@ func getActualStatus(source string) (result string, err error) {
 	if err != nil {
 		return result, err
 	}
-
-	log.Println("Got result ... ")
 
 	return string(resultBody), err
 
@@ -56,7 +54,7 @@ func writeToSocket(conn net.Conn, message string) (err error) {
 	return err
 }
 
-func checkStatusPeriodically(parameters Parameters) {
+func loadDataAndSendToServerPeriodically(parameters Parameters) {
 
 	conn, socketErr := SocketClient(parameters.socketServerUrl, parameters.serverPort)
 
@@ -64,14 +62,14 @@ func checkStatusPeriodically(parameters Parameters) {
 	go func() {
 		for t := range ticker.C {
 
-			status, err := getActualStatus(parameters.source)
+			status, err := loadDataFromSource(parameters.source)
 
 			if err != nil {
 				log.Println("Error getting actual state: ", err)
 				continue
 			}
 
-			fmt.Println("Got Status (%v)", t)
+			fmt.Println("Got data (%v)", t)
 
 			if conn != nil {
 				socketErr = writeToSocket(conn, status)
@@ -94,7 +92,7 @@ func main() {
 
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	checkStatusPeriodically(parameters)
+	loadDataAndSendToServerPeriodically(parameters)
 
 	go func() {
 		sig := <-sigs
